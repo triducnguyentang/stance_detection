@@ -5,7 +5,6 @@ import numpy as np
 from sklearn import feature_extraction
 from tqdm import tqdm
 
-# nltk.download()
 
 import gensim
 from gensim.models.word2vec import Word2Vec
