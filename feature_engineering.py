@@ -43,6 +43,9 @@ def gen_or_load_feats(feat_fn, headlines, bodies, feature_file):
 
     return np.load(feature_file)
 
+def gen_feats_for_test(feat_fn, headlines, bodies):
+    return feat_fn(headlines, bodies)
+
 def load_features(feat_fn, headlines, bodies):
     feats = feat_fn(headlines, bodies)
     return feats

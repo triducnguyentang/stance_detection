@@ -60,3 +60,9 @@ def get_stances_for_folds(dataset,folds,hold_out):
                 fold_id += 1
 
     return stances_folds,stances_hold_out
+
+def get_stances(dataset):
+    stances = []
+    for stance in dataset.stances:
+        stances.append(stance)
+    return stances

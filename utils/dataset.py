@@ -35,13 +35,13 @@ class DataSet():
                 rows.append(line)
         return rows
 
-class Test_dataset():
+class TestDataset():
     def __init__(self, path="fnc-1"):
         self.path = path
 
         print("Reading dataset")
         bodies = "test_bodies.csv"
-        stances = "test_stances.csv"
+        stances = "test_stances_unlabeled.csv"
 
         self.stances = self.read(stances)
         articles = self.read(bodies)
