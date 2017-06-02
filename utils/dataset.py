@@ -46,6 +46,7 @@ class TestDataset():
         self.stances = self.read(stances)
         articles = self.read(bodies)
         self.articles = dict()
+        self.bodies = []
 
         #make the body ID an integer value
         for s in self.stances:
@@ -55,6 +56,8 @@ class TestDataset():
         for article in articles:
             self.articles[int(article['Body ID'])] = article['articleBody']
 
+        # for s in self.stances:
+            # self.bodies.append(self.articles[s['Body ID']])
         print("Total stances: " + str(len(self.stances)))
         print("Total bodies: " + str(len(self.articles)))
 
