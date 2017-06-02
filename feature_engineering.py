@@ -89,7 +89,7 @@ def gen_w2v(headlines, bodies):
     # print("************* traing word2vec ***************")
     # tweet_w2v.build_vocab([x for x in x_train])
     # tweet_w2v.train([x for x in x_train], total_examples=len(x_train), epochs=5)
-    # tweet_w2v.save('tweet_w2v_100')
+    # tweet_w2v.save('tweet_w2v_50')
     print("************* load word2vec model ***************")
     tweet_w2v = gensim.models.Word2Vec.load('tweet_w2v_50')
     print("************* create body feature ***************")
