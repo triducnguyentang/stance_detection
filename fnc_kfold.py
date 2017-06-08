@@ -19,7 +19,7 @@ import pickle
 
 #########################
 SEQ = 8
-FILENAME = "features_50/"
+# FILENAME = "features/"
 
 def generate_features(stances,dataset,name):
     h, b, y = [],[],[]

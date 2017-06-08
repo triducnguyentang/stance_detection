@@ -10,11 +10,15 @@ import gensim
 from gensim.models.word2vec import Word2Vec
 from sklearn.preprocessing import scale
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from string import punctuation
 
 _wnl = nltk.WordNetLemmatizer()
 
-
-NDIM = 50
+stop = set(stopwords.words('english'))
+NDIM = 300
 
 
 def normalize_word(w):
@@ -37,9 +41,9 @@ def remove_stopwords(l):
 
 
 def gen_or_load_feats(feat_fn, headlines, bodies, feature_file):
-    if not os.path.isfile(feature_file):
-        feats = feat_fn(headlines, bodies)
-        np.save(feature_file, feats)
+    # if not os.path.isfile(feature_file):
+    feats = feat_fn(headlines, bodies)
+    np.save(feature_file, feats)
 
     return np.load(feature_file)
 
@@ -53,12 +57,12 @@ def load_features(feat_fn, headlines, bodies):
 
     
 #####################################
-def buildWordVector(tokens, size, model):
+def buildWordVector(tokens, size, model, tfidf):
     vec = np.zeros(size).reshape((1, size))
     count = 0.
     for word in tokens:
         try:
-            vec += model[word].reshape((1, size)) # * tfidf[word]
+            vec += model[word].reshape((1, size)) * tfidf[word]
             count += 1.
         except KeyError: # handling the case where the token is not
                          # in the corpus. useful for testing.
@@ -67,13 +71,35 @@ def buildWordVector(tokens, size, model):
         vec /= count
     return vec
 
+def tokenizer(text):
+    try:
+        tokens_ = [word_tokenize(sent) for sent in sent_tokenize(text)]
+        
+        tokens = []
+        for token_by_sent in tokens_:
+            tokens += token_by_sent
 
-def gen_w2v(headlines, bodies):
+        tokens = list(filter(lambda t: t.lower() not in stop, tokens))
+        tokens = list(filter(lambda t: t not in punctuation, tokens))
+        tokens = list(filter(lambda t: t not in [u"'s", u"n't", u"...", u"''", u'``', 
+                                            u'\u2014', u'\u2026', u'\u2013'], tokens))
+        filtered_tokens = []
+        for token in tokens:
+            if re.search('[a-zA-Z]', token):
+                filtered_tokens.append(token)
+
+        filtered_tokens = list(map(lambda token: token.lower(), filtered_tokens))
+
+        return filtered_tokens
+    except Error as e:
+        print(e)
+
+def gen_w2v_global(headlines, bodies):
     print("***************begin***************")
     x_train = []
     X_headline = []
     X_body = []
-    
+    text = headlines + bodies
     for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
         clean_headline = clean(headline)
         clean_body = clean(body)
@@ -84,18 +110,67 @@ def gen_w2v(headlines, bodies):
         X_headline.append(clean_headline)
         X_body.append(clean_body)
         
+
+    ############### tf_idf ####################
+    vectorizer = TfidfVectorizer(min_df=10, max_features=10000, tokenizer=tokenizer, ngram_range=(1, 3))
+    print("************* traing tf_idf ***************")
+    matrix = vectorizer.fit_transform(list(text))
+    tfidf = dict(zip(vectorizer.get_feature_names(), vectorizer.idf_))
+    
     ################ word2vec #################
-    # tweet_w2v = Word2Vec(size=NDIM, min_count=10)
-    # print("************* traing word2vec ***************")
-    # tweet_w2v.build_vocab([x for x in x_train])
-    # tweet_w2v.train([x for x in x_train], total_examples=len(x_train), epochs=5)
-    # tweet_w2v.save('tweet_w2v_50')
     print("************* load word2vec model ***************")
-    tweet_w2v = gensim.models.Word2Vec.load('tweet_w2v_50')
+    tweet_w2v = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True)
     print("************* create body feature ***************")
-    train_body_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v) for z in tqdm(X_body)])
+    train_body_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v, tfidf=tfidf) for z in tqdm(X_body)])
     print("************* create headline feature ***************")
-    train_headline_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v) for z in tqdm(X_headline)])
+    train_headline_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v, tfidf=tfidf) for z in tqdm(X_headline)])
+    print("************* scale feature ***************")
+    train_body_vecs_w2v = scale(train_body_vecs_w2v)
+    train_headline_vecs_w2v = scale(train_headline_vecs_w2v)
+    print("************* DONE ***************")
+    
+    return [train_headline_vecs_w2v, train_body_vecs_w2v]    
+    
+    
+def gen_w2v(headlines, bodies):
+    print("***************begin***************")
+    x_train = []
+    X_headline = []
+    X_body = []
+    text = headlines + bodies
+    for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
+        clean_headline = clean(headline)
+        clean_body = clean(body)
+        clean_headline = get_tokenized_lemmas(clean_headline)
+        clean_body = get_tokenized_lemmas(clean_body)
+        
+        x_train.append(clean_headline+clean_body)
+        X_headline.append(clean_headline)
+        X_body.append(clean_body)
+
+
+    ############### tf_idf ####################
+    vectorizer = TfidfVectorizer(min_df=10, max_features=10000, tokenizer=tokenizer, ngram_range=(1, 3))
+    print("************* traing tf_idf ***************")
+    matrix = vectorizer.fit_transform(list(text))
+    tfidf = dict(zip(vectorizer.get_feature_names(), vectorizer.idf_))
+
+    
+    ################ word2vec #################
+    tweet_w2v = Word2Vec(size=NDIM, min_count=10)
+    print("************* traing word2vec ***************")
+    tweet_w2v.build_vocab([x for x in x_train])
+    #tweet_w2v.train([x for x in x_train], total_examples=len(x_train), epochs=5)
+    tweet_w2v.train([x for x in x_train], total_examples=len(x_train))
+    tweet_w2v.save('tweet_w2v_300')
+    
+    ############################################
+    print("************* load word2vec model ***************")
+    tweet_w2v = gensim.models.Word2Vec.load('tweet_w2v_300')
+    print("************* create body feature ***************")
+    train_body_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v, tfidf=tfidf) for z in tqdm(X_body)])
+    print("************* create headline feature ***************")
+    train_headline_vecs_w2v = np.concatenate([buildWordVector(z, NDIM, model=tweet_w2v, tfidf=tfidf) for z in tqdm(X_headline)])
     print("************* scale feature ***************")
     train_body_vecs_w2v = scale(train_body_vecs_w2v)
     train_headline_vecs_w2v = scale(train_headline_vecs_w2v)

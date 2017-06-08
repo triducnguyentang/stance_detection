@@ -52,7 +52,7 @@ def build_model(sequence_length, data_dim, num_classes):
 
 def build_ann():
     model = Sequential()
-    model.add(Dense(1000, activation='relu', input_dim=144))
+    model.add(Dense(1000, activation='relu', input_dim=644))
     model.add(Dropout(0.5))
     model.add(Dense(1000, activation='relu'))
     model.add(Dropout(0.5))

@@ -52,11 +52,13 @@ def run_model():
     predicted = model.predict_classes(X_test)
     predicted_label = [LABELS[int(a)] for a in predicted]
     # predicted = np.reshape(predicted, (predicted.size,))
-    with open('results.csv', 'wt') as f:
-        writer = csv.writer(f)
-        writer.writerows(zip(headlines, bodies, predicted_label))
+    # with open('results.csv', 'wt') as f:
+        # writer = csv.writer(f)
+        # writer.writerows(zip(headlines, bodies, predicted_label))
     # np.savetxt("predict_stance_classes.csv", predicted, delimiter=",")
     # np.savetxt("predict_stance_labels.csv", predicted_label, fmt='%5s', delimiter=",")
+    for headline, body, label in zip(headlines, bodies, predicted_label):
+        print("Headline: ", headline, "\tBody: ", body, "\tLabel: ", label)
 
 if __name__ == '__main__':
     run_model()
